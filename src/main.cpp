@@ -1,4 +1,3 @@
-#include <ros/ros.h>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <GL/glut.h>
@@ -26,6 +25,12 @@ ParticleManager particle_manager_;
 
 // window 좌표계는 좌상단이 0,0
 // OpenGL 좌표계는 좌하단이 0,0
+
+double GetCurrentTime() {
+    auto now = std::chrono::system_clock::now();
+    auto duration = now.time_since_epoch();
+    return std::chrono::duration<double>(duration).count();
+}
 
 // Convert window coordinates to OpenGL coordinates
 std::pair<double, double> WindowToOpenGLCoords(const double& d_window_x, const double& d_window_y) {
@@ -56,7 +61,7 @@ std::pair<double, double> PhysicsToWindowCoords(const double& d_physics_x, const
 }
 
 void AddParticleMouse() {
-    double current_time = ros::Time::now().toSec();
+    double current_time = GetCurrentTime();
     if (current_time - d_last_gen_time_ > MIN_GEN_DT) {
         std::pair<double, double> d_physics_coords = WindowToPhysicsCoords(d_mouse_x_, d_mouse_y_);
         // particle_manager_.AddParticle(d_physics_coords.first, d_physics_coords.second, 0.0, 0.0, 0.0, -GRAVITY, particle_manager_.GetParticleCount());
@@ -126,10 +131,6 @@ int main(int argc, char** argv) {
     // Initialize GLUT
     glutInit(&argc, argv);
 
-    // Initialize ROS
-    ros::init(argc, argv, "particle_simulation");
-    ros::NodeHandle nh;
-
     particle_manager_.SetBounds(0, d_window_width_, 0, d_window_height_);
 
     // Initialize GLFW
@@ -155,7 +156,8 @@ int main(int argc, char** argv) {
     glfwMakeContextCurrent(p_window);
 
     // Initialize GLEW
-    if (glewInit() != GLEW_OK) {
+    GLenum glew_init_result = glewInit();
+    if (glew_init_result != GLEW_OK && glew_init_result != GLEW_ERROR_NO_GLX_DISPLAY) {
         std::cerr << "GLEW Initialize Failed" << std::endl;
         return -1;
     }
@@ -169,7 +171,7 @@ int main(int argc, char** argv) {
     glfwSetCursorPosCallback(p_window, CursorPositionCallback);
 
     // Main loop
-    while (ros::ok() && !glfwWindowShouldClose(p_window)) {
+    while (!glfwWindowShouldClose(p_window)) {
 
         // Measure time taken by UpdateParticles
         auto start_time = std::chrono::high_resolution_clock::now();
